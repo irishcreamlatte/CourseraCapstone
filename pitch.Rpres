@@ -1,0 +1,67 @@
+Next Text Prediction App
+========================================================
+author: G. Hirang
+date: 
+autosize: true
+[Try the App!](https://irishcreamlatte.shinyapps.io/NextText/)
+
+Coursera Data Science Capstone 
+ 
+INTRODUCTION
+========================================================
+Technological advances made it easy to collect vast amounts of data, including textual information: 
+
+- blogs and personal writings 
+- Tweets, Facebook and other social media posts 
+- news, scientific and other types of articles
+
+***
+
+Natural Language Processing (NLP) allows us to process these data in order to use them [for other purposes](https://monkeylearn.com/blog/definitive-guide-natural-language-processing/): 
+
+- Machine Translation
+- Sentiment Analysis 
+- Automatic Classification 
+- Text Classification 
+- Text Prediction 
+
+NEXT TEXT APP
+========================================================
+A simple text prediction app based on the [Kneser-Ney algorithm](https://web.stanford.edu/~jurafsky/slp3/3.pdf): 
+
+![Kneser-Ney](kneser-ney.png)
+
+The algorithm predicts the next word based on probabilities estimated using trigrams and bigrams. Instead of just looking at how frequently used a word is (i.e. in unigrams), it considers the context of word use: 
+- How many bigrams or trigrams does it complete?
+
+
+NEXT TEXT APP 
+========================================================
+2 words entered: 
+![first picture](app1.PNG)
+
+
+- With a trigram match: use trigram probabilities. 
+- No trigram match: use bigram probabilities. 
+
+***
+1 word entered: 
+![second picture](app2.PNG)
+
+- No bigram match: use unigram probabilities. 
+- No words entered: use random frequently used word. 
+
+
+REFERENCES 
+========================================================
+
+Daniel Jurafsky & James H. Martin. [N-gram Language Models.](https://web.stanford.edu/~jurafsky/slp3/3.pdf)   
+
+Denny Ceccon. [A simple numerical example for Kneser-Ney Smoothing[NLP].](https://medium.com/@dennyc/a-simple-numerical-example-for-kneser-ney-smoothing-nlp-4600addf38b8)
+
+Frankie James. [Modified Kneser-Ney Smoothing of n-gram Models.](https://core.ac.uk/download/pdf/22877567.pdf)
+
+Javier Couto. [The Definitive Guide to Natural Language Processing.](https://monkeylearn.com/blog/definitive-guide-natural-language-processing/)
+
+Jon Gauthier. [Kneser-Ney smoothing explained.](http://www.foldl.me/2014/kneser-ney-smoothing/) 
+Mittul Singh. [N-gram Language models and Smoothing.] (https://jon.dehdari.org/teaching/uds/lt1/ngram_lms.pdf)
