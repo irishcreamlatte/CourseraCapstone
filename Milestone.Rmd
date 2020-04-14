@@ -1,0 +1,291 @@
+---
+title: "Milestone Report"
+author: "G. Hirang"
+date: "4/13/2020"
+output: html_document
+---
+
+## Introduction 
+
+In preparation for the development of a predictive text mining application, I analyzed a corpora composed of English tweets, news articles, and blog posts. The aim of the analysis was to examine the distribution of, and relationship between, words, tokens and phrases. In order to understand the frequencies of words and word pairs, a simple n-gram model was also developed. 
+
+## Importing and Cleaning the Data 
+
+Given the limited RAM of my laptop, I used the `quanteda` package. Especially compared to `tm`, `quanteda` was faster, more efficient, and needed less resources.
+
+```{r loading packages, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+library(quanteda)
+library(qdap)
+library(stringi)
+```
+
+```{r data, include=FALSE, results='hide'}
+load("myData.Rdata")
+```
+
+The dataset was downloaded directly from Coursera, and it is composed of data from SwiftKey. Only the English data was used for purposes of this analysis. 
+
+```{r data download, eval=FALSE, echo=TRUE, results='hide'}
+fileURL <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+download.file(fileURL, destfile = "./Coursera-SwiftKey.zip", method = "curl")
+unzip("./Coursera-SwiftKey.zip")
+blogs <- read_lines("./final/en_US/en_US.blogs.txt")
+news <- read_lines("./final/en_US/en_US.news.txt")
+twitter <- read_lines("./final/en_US/en_US.twitter.txt")
+```
+
+```{r data summaries, eval = FALSE, echo = FALSE}
+blogs_size <- file.info("./final/en_US/en_US.blogs.txt")$size
+news_size <- file.info("./final/en_US/en_US.news.txt")$size
+twitter_size <- file.info("./final/en_US/en_US.twitter.txt")$size
+
+blogs_words <- stri_count_words(blogs)
+news_words <- stri_count_words(news)
+twitter_words <- stri_count_words(twitter)
+```
+
+The table below presents the sizes, number of rows, and number of words of each of the three .txt files. 
+
+```{r data summary table, echo = FALSE}
+data.frame("File" = c("Blogs", "News", "Tweets"),
+           "Size" = c(blogs_size, news_size, twitter_size),
+            "Rows" = c(length(blogs), length(news), length(twitter)), 
+            "Words" = c(sum(blogs_words), sum(news_words), sum(twitter_words)))
+```
+
+Given the significant size of the original datasets, I obtained a subset corresponding to 5% of the total contents of each of the original blogs, news, and twitter datasets. This subset (`datasample`) was used to construct the corpus, which was in turn the subject of this analysis. 
+
+```{r sampling and corpus, eval=FALSE, echo=TRUE, results='hide'}
+set.seed(1234)
+blogs_sample <- sample(blogs, length(blogs) * 0.05)
+news_sample <- sample(news, length(news) * 0.05)
+twitter_sample <- sample(twitter, length(twitter) * 0.05)
+
+datasample <- c(blogs_sample, news_sample, twitter_sample)
+
+mycorpus <- corpus(datasample)
+```
+
+Based on an initial exploration of the sampled datasets, the most common words are stop words such as "the", "and", and "is". As these are the most widely used English words, the fact that they likewise frequently occur in these datasets do not tell us much.  
+
+```{r exploratory analysis 1, eval=FALSE, echo=TRUE}
+freq_blogs <- freq_terms(blogs_sample, 10)
+freq_news <- freq_terms(news_sample, 10)
+freq_twitter <- freq_terms(twitter_sample, 10)
+```
+
+```{r figures1, echo=FALSE, fig.height=2, fig.width=3}
+freq_blogs %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) +
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() + 
+    labs(title = "Frequent Blog Words", x = "Count", y = "Word")
+
+freq_news %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() + 
+    labs(title = "Frequent News Words", x = "Count", y = "Word")
+
+freq_twitter %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() +
+    labs(title = "Frequent Words in Tweets", x = "Count", y = "Word")
+```
+
+The exploratory analysis is more informative when these stopwords and words with less than 3 letters are excluded. As can be seen below, the most frequently used words are now "but", "not", "all", "one", "about", "will", "out", and "what". We can also see that the most commonly used words differed among the 3 datasets. 
+
+```{r exploratory analysis 2, eval=FALSE, echo=TRUE}
+freq_blogs_stop <- freq_terms(blogs_sample, at.least = 3, stopwords=qdapDictionaries::Top25Words, 10)
+freq_news_stop <- freq_terms(news_sample, at.least = 3, stopwords=qdapDictionaries::Top25Words, 10)
+freq_twitter_stop <- freq_terms(twitter_sample, at.least = 3, stopwords=qdapDictionaries::Top25Words, 10)
+```
+
+```{r figures2, echo=FALSE, fig.height=2, fig.width=3}
+freq_blogs_stop %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) +
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() + 
+    labs(title = "Frequent Blog Words", subtitle = "Without Stopwords", x = "Count", y = "Word")
+
+freq_news_stop %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() + 
+    labs(title = "Frequent News Words", subtitle = "Without Stopwords", x = "Count", y = "Word")
+
+freq_twitter_stop %>% 
+    ggplot(aes(x = reorder(WORD, -FREQ), y = FREQ)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    coord_flip() +
+    labs(title = "Frequent Words in Tweets", subtitle = "Without Stopwords", x = "Count", y = "Word")
+```
+
+## Creating Tokens and DFMs
+
+Before the analysis proper, the individual words in `mycorpus` need to be converted into tokens. As tokens, every instance of each word can be counted and analyzed. At this junction, we can also clean the dataset by removing stopwords, profane words and non-word elements such as punctuations, symbols, numbers, and URLs. We also need to change all the words into lowercase, to ensure uniformity and to avoid having the same word tokenized twice.  
+
+The list of profane words was obtained from [BannedWordList.com](http://www.bannedwordlist.com/lists/swearWords.txt)
+
+```{r tokenizing, eval = FALSE, include = TRUE}
+tokens_mycorpus <- tokens(mycorpus, 
+                          remove_punct = TRUE, 
+                          remove_symbols = TRUE,
+                          remove_numbers = TRUE, 
+                          remove_url = TRUE,
+                          split_hyphens = TRUE, 
+                          remove_separators = TRUE)
+
+tokens_mycorpus <- tokens_tolower(tokens_mycorpus)
+
+tokens_mycorpus <- tokens_remove(tokens_mycorpus,
+stopwords("english"), verbose = TRUE)
+
+profanity <- read_lines("./swearWords.txt")
+profanity <- gsub(" ", "", profanity)
+profanity <- tolower(profanity)
+tokens_mycorpus <- tokens_remove(tokens_mycorpus, 
+                                 pattern = profanity, 
+                                 verbose = TRUE)
+```
+
+We can use these tokens to generate n-grams of specified lengths. N-grams are sequences of tokens of N-lengths, i.e. 2-grams are sequences of 2 tokens, 3-grams are sequences of 3 tokens, and so forth. N-grams allow us to examine commonly used phrases and word combinations. In this case, I generated unigrams (1-grams), bigrams (2-grams), and trigrams (3-grams). 
+
+```{r N-grams, eval=FALSE, echo=TRUE, results='hide'}
+mycorpus_unigrams <- tokens_ngrams(tokens_mycorpus, n = 1)
+mycorpus_bigrams <- tokens_ngrams(tokens_mycorpus, n = 2)
+mycorpus_trigrams <- tokens_ngrams(tokens_mycorpus, n = 3)
+```
+
+Following this, I stored the generated N-grams into document feature matrices (dfms) which show the frequency of word occurrences. The subsequent analysis will also be performed on these dfms. 
+
+Under the `quanteda` package, dfms are generated using the `dfm` function. I further cleaned the text up by converting the text into their stem or base words. This allows us to count base words and their conjugations or other transformations, i.e. with words with suffixes, as only one word, thus allowing for a more accurate determination of word frequency. 
+
+```{r dfm creation, eval=FALSE, echo=TRUE, results='hide'}
+dfm_unicorpus <- dfm(mycorpus_unigrams, 
+                     stem = TRUE)
+dfm_bigrams <- dfm(mycorpus_bigrams,  
+                   stem = TRUE)
+dfm_trigrams <- dfm(mycorpus_trigrams,  
+                    stem = TRUE)
+```
+
+## Analysis 
+
+The word cloud below presents the 100 most frequently used words in the corpus. 
+
+```{r uni word cloud, echo=FALSE, fig.height=5, fig.width=5}
+textplot_wordcloud(dfm_unicorpus, max_words = 100, 
+                   rotation = 0.25,
+                   color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+For a clearer picture of word frequencies, I considered the top 15 most frequently used words. The top 3 words are "one", "just" and "said". "One" is among the most used words for both blogs and news articles, while "just" and "said" were common only in tweets and news articles, respectively. 
+
+```{r unigrams, eval=FALSE, echo=TRUE}
+unicorpus <- textstat_frequency(dfm_unicorpus)
+```
+
+```{r uni graph, echo=FALSE, fig.height=5, fig.width=5}
+unicorpus %>% 
+    data.frame() %>%  
+    arrange(desc(frequency)) %>% 
+    top_n(15, frequency) %>% 
+    ggplot(aes(x = reorder(feature, -frequency), y = frequency)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    theme(axis.text.x=element_text(angle = 45, hjust = 1)) + 
+    labs(title = "Top 15 Words", x = "Words", y = "Count")
+```
+
+Looking at the cumulative composition of the corpora vis-a-vis the number of unique unigrams, we see that almost all of the corpora is composed of just a small fraction of the total number of unique words. This suggests that a small number of words is frequently used, while a majority of unique words is seldomly used.
+
+```{r cumulative uni, eval=FALSE, echo=TRUE}
+cumulative_uni <- topfeatures(dfm_unicorpus, length(dfm_unicorpus))
+cumulative_uni <- data.frame(cumulative_uni)
+cumulative_uni$n <- c(1:nrow(cumulative_uni))
+cumulative_uni$total <- cumsum(cumulative_uni$cumulative_uni)
+```
+
+```{r cumu uni graph, echo=FALSE, fig.height=5, fig.width=5}
+ggplot(cumulative_uni, aes(x =n, y =total)) + geom_line() + xlab('Number of Unique Words') + ylab('Coverage') + ggtitle('Coverage per Number of Unigrams')
+```
+
+The word cloud below presents the 50 most frequently used word pairs in the corpus. To gain a clearer picture of the frequency of word pairs, I examined the top 15 commonly used word pairs. The most common word pairs are: "right now", "last year", and "look like". 
+
+```{r bi word cloud, echo = FALSE, fig.height=5, fig.width=5}
+textplot_wordcloud(dfm_bigrams, max_words = 50, 
+                   rotation = 0.25, 
+                   color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+```{r bigrams, eval=FALSE, echo=TRUE} 
+bicorpus <- textstat_frequency(dfm_bigrams)
+```
+
+```{r bi graph, echo=FALSE, fig.height=5, fig.width=5}
+bicorpus %>% 
+    data.frame() %>% 
+    arrange(desc(frequency)) %>% 
+    top_n(15, frequency) %>% 
+    ggplot(aes(x = reorder(feature, -frequency), y = frequency)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+    labs(title = "Top 15 Bigrams", x = "Words", y = "Count")
+```
+
+Unlike unigrams, a majority of the corpora is composed of two-thirds of the total number of unique word pairs. This suggests that there is more variation in the use of word pairs. 
+
+```{r cumulative bi, eval=FALSE, echo=TRUE}
+cumulative_bi <- topfeatures(dfm_bigrams, length(dfm_bigrams))
+cumulative_bi <- data.frame(cumulative_bi)
+cumulative_bi$n <- c(1:nrow(cumulative_bi))
+cumulative_bi$total <- cumsum(cumulative_bi$cumulative_bi)
+```
+
+```{r cumula bi graph, echo=FALSE, fig.height=5, fig.width=5}
+ggplot(cumulative_bi, aes(x =n, y =total)) + geom_line() + xlab('Number of Bigrams') + ylab('Coverage') + ggtitle('Coverage per Number of Bigrams')
+```
+
+The word cloud below presents the top 50 most commonly used trigrams. 
+
+```{r tri word cloud, echo=FALSE, fig.height=5, fig.width=5}
+textplot_wordcloud(dfm_trigrams, max_words = 50, 
+                   rotation = 0.25, 
+                   color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+The graph below shows the top 15 most commonly used trigrams. We can see that notable entries in this list are greetings ("happy mother's day", "happy new year") and names/nouns ("President Barack Obama", "Gov. Chris Christie", and "World War II"). 
+
+```{r trigrams, eval=FALSE, echo=TRUE}
+tricorpus <- textstat_frequency(dfm_trigrams)
+```
+
+```{r tri graph, echo=FALSE, fig.height=5, fig.width=5}
+tricorpus %>% 
+    data.frame() %>% 
+    arrange(desc(frequency)) %>% 
+    top_n(15, frequency) %>% 
+    ggplot(aes(x = reorder(feature, -frequency), y = frequency)) + 
+    geom_bar(stat = "identity", color = "skyblue", fill = "steelblue") + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+    labs(title = "Top 15 Trigrams", x = "Words", y = "Count")
+```
+
+For trigrams, we see a linear trend between the composition of the corpora and the number of unique trigrams. This suggests a great variability in the use of trigrams, and that trigrams are less common that word pairs. 
+
+```{r cumulative tri, eval=FALSE, echo=TRUE}
+cumulative_tri <- topfeatures(dfm_trigrams, length(dfm_trigrams))
+cumulative_tri <- data.frame(cumulative_tri)
+cumulative_tri$n <- c(1:nrow(cumulative_tri))
+cumulative_tri$total <- cumsum(cumulative_tri$cumulative_tri)
+```
+
+```{r trigraph, echo=FALSE, fig.height=5, fig.width=5}
+ggplot(cumulative_tri, aes(x =n, y =total)) + geom_line() + xlab('Number of Trigrams') + ylab('Coverage') + ggtitle('Coverage per Number of Trigrams')
+```
+
+## Implications for the Application 
+
+The above analysis showed that 1) a small fraction of unique words are disproportionately and more frequently used, and 2) bigrams are more common that trigrams. As such, probabilities obtained solely from unigrams might be misleading, as these will give greater weight to commonly used words. Thus, the predictive application which considers the context of the words, i.e. trigrams and bigrams, might lead to better results. 
